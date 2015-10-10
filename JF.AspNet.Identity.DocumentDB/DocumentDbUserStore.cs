@@ -103,7 +103,9 @@ namespace JF.AspNet.Identity.DocumentDB {
 		/// <param name="userName" />
 		/// <returns />
 		public Task<TUser> FindByNameAsync( string userName ) {
-			return Task.FromResult( _collectionManager.Users.AsQueryable().FirstOrDefault( user => user.UserName == userName ) );
+			return
+				Task.FromResult(
+					_collectionManager.Users.AsQueryable().Where( user => user.UserName == userName ).AsEnumerable().FirstOrDefault() );
 		}
 
 		#endregion
@@ -243,7 +245,9 @@ namespace JF.AspNet.Identity.DocumentDB {
 			}
 
 			var identityUserClaim =
-				user.Claims.FirstOrDefault( userClaim => userClaim.ClaimType == claim.Type && userClaim.ClaimValue == claim.Value );
+				user.Claims.Where( userClaim => userClaim.ClaimType == claim.Type && userClaim.ClaimValue == claim.Value )
+					.AsEnumerable()
+					.FirstOrDefault();
 
 			if ( identityUserClaim != null ) {
 				user.Claims.Remove( identityUserClaim );
@@ -399,7 +403,9 @@ namespace JF.AspNet.Identity.DocumentDB {
 		/// <param name="email" />
 		/// <returns />
 		public Task<TUser> FindByEmailAsync( string email ) {
-			return Task.FromResult( _collectionManager.Users.AsQueryable().FirstOrDefault( user => user.Email == email ) );
+			return
+				Task.FromResult(
+					_collectionManager.Users.AsQueryable().Where( user => user.Email == email ).AsEnumerable().FirstOrDefault() );
 		}
 
 		#endregion
@@ -484,8 +490,10 @@ namespace JF.AspNet.Identity.DocumentDB {
 			}
 
 			var userLogin =
-				user.Logins.FirstOrDefault(
-					item => item.LoginProvider == login.LoginProvider && item.ProviderKey == login.ProviderKey );
+				user.Logins.Where(
+					item => item.LoginProvider == login.LoginProvider && item.ProviderKey == login.ProviderKey )
+					.AsEnumerable()
+					.FirstOrDefault();
 
 			if ( userLogin == null ) {
 				user.Logins.Add( new IdentityUserLogin {
@@ -513,8 +521,10 @@ namespace JF.AspNet.Identity.DocumentDB {
 			}
 
 			var userLogin =
-				user.Logins.FirstOrDefault(
-					item => item.LoginProvider == login.LoginProvider && item.ProviderKey == login.ProviderKey );
+				user.Logins.Where(
+					item => item.LoginProvider == login.LoginProvider && item.ProviderKey == login.ProviderKey )
+					.AsEnumerable()
+					.FirstOrDefault();
 
 			if ( userLogin != null ) {
 				user.Logins.Remove( userLogin );
@@ -549,11 +559,10 @@ namespace JF.AspNet.Identity.DocumentDB {
 			}
 
 			var userFromDb =
-				_collectionManager.Users.AsQueryable()
-								  .FirstOrDefault(
-									  user =>
-										  user.Logins.Any(
-											  userLogin => userLogin.LoginProvider == login.LoginProvider && userLogin.ProviderKey == login.ProviderKey ) );
+				_collectionManager.Users.CreateDocumentQuery(
+					$"SELECT * FROM Users WHERE ARRAY_CONTAINS(Users.Logins, {{LoginProvider:'{login.LoginProvider}',ProviderKey:'{login.ProviderKey}'}})" )
+								  .AsEnumerable()
+								  .FirstOrDefault();
 
 			if ( userFromDb == null ) {
 				return Task.FromResult<TUser>( null );
